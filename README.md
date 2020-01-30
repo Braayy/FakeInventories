@@ -2,42 +2,27 @@
 
 Easily create fake inventories that players can interact with.
 
-##### [Download](https://github.com/NukkitX/FakeInventories/releases)
+##### [Download](https://github.com/Braayy/FakeInventories/releases)
 
 ## Usage
 
 ```java
-    public void onEnable() {
-        RegisteredServiceProvider<FakeInventories> provider = getServer().getServiceManager().getProvider(FakeInventories.class);
-        
-        if (provider == null || provider.getProvider() == null) {
-            this.getServer().getPluginManager().disablePlugin(this);
-        }
-        
-        ...
-    }
+    FakeInventory inventory = FakeInventories.createFakeInventory(InventoryType.CHEST, null, "Testing...");
+
+    inventory.addItem(Item.get(Item.BAKED_POTATO));
+
+    inventory.addListener(event -> {
+        event.getPlayer().sendMessage("You cliked on the inventory :D");    
+    })
+
+    inventory.open(player);
 ``` 
-
-## Maven Dependency
-
-```xml
-    <repositories>
-        <repository>
-            <id>nukkitx-repo</id>
-            <url>https://repo.nukkitx.com/snapshot/</url>
-        </repository>
-    </repositories>
-
-    <dependencies>
-        <dependency>
-            <groupId>com.nukkitx</groupId>
-            <artifactId>fakeinventories</artifactId>
-            <version>1.0.2</version>
-            <scope>provided</scope>
-        </dependency>
-    </dependencies>
-```
 
 ## Todo
 
-- Add Hopper inventory
+- Add Ender Chest support
+- Add Furnace support
+- Add Crafting Table support
+- Add Anvil support
+- Add Dispenser support
+- Add Dropper support
