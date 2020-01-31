@@ -3,20 +3,21 @@ package com.nukkitx.fakeinventories.inventory;
 import cn.nukkit.Player;
 import cn.nukkit.Server;
 import cn.nukkit.inventory.ContainerInventory;
-import cn.nukkit.inventory.Inventory;
 import cn.nukkit.inventory.InventoryHolder;
 import cn.nukkit.inventory.InventoryType;
 import cn.nukkit.inventory.transaction.action.SlotChangeAction;
-import cn.nukkit.item.Item;
 import cn.nukkit.level.GlobalBlockPalette;
 import cn.nukkit.math.BlockVector3;
 import cn.nukkit.math.Vector3;
+import cn.nukkit.nbt.NBTIO;
+import cn.nukkit.nbt.tag.CompoundTag;
+import cn.nukkit.network.protocol.BlockEntityDataPacket;
 import cn.nukkit.network.protocol.ContainerOpenPacket;
-import cn.nukkit.network.protocol.InventoryContentPacket;
 import cn.nukkit.network.protocol.UpdateBlockPacket;
 import com.google.common.base.Preconditions;
 
-import java.lang.reflect.Field;
+import java.io.IOException;
+import java.nio.ByteOrder;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,20 +27,7 @@ import java.util.function.Consumer;
 
 public abstract class FakeInventory extends ContainerInventory {
     private static final BlockVector3 ZERO = new BlockVector3(0, 0, 0);
-
-    private static Field WINDOW_CNT_FIELD, WINDOWS_FIELD;
-
-    static {
-        try {
-            WINDOW_CNT_FIELD = Player.class.getDeclaredField("windowCnt");
-            WINDOW_CNT_FIELD.setAccessible(true);
-
-            WINDOWS_FIELD = Player.class.getDeclaredField("windows");
-            WINDOWS_FIELD.setAccessible(true);
-        } catch (Exception ex) {
-            ex.printStackTrace();
-        }
-    }
+    protected static final int BLOCK_OFFSET = -5;
 
     static final Map<Player, FakeInventory> open = new ConcurrentHashMap<>();
 
@@ -68,22 +56,12 @@ public abstract class FakeInventory extends ContainerInventory {
         onFakeOpen(who, blocks);
     }
 
-    @SuppressWarnings("unchecked")
     protected void onFakeOpen(Player who, BlockVector3[] blocks) {
         BlockVector3 blockPosition = blocks.length > 0 ? blocks[0] : ZERO;
 
         try {
-            final int windowCnt = WINDOW_CNT_FIELD.getInt(who);
-            final int windowId = Math.max(4, (windowCnt + 1) % 99);
-
-            WINDOW_CNT_FIELD.setInt(who, windowId);
-
-            final Map<Inventory, Integer> windows = (Map<Inventory, Integer>) WINDOWS_FIELD.get(who);
-
-            windows.put(this, windowId);
-
             ContainerOpenPacket containerOpen = new ContainerOpenPacket();
-            containerOpen.windowId = windowId;
+            containerOpen.windowId = who.getWindowId(this);
             containerOpen.type = this.getType().getNetworkType();
             containerOpen.x = blockPosition.x;
             containerOpen.y = blockPosition.y;
@@ -97,25 +75,6 @@ public abstract class FakeInventory extends ContainerInventory {
         Server.getInstance().getScheduler().scheduleDelayedTask(() -> {
             this.sendContents(who);
         }, 5);
-    }
-
-    @Override
-    public void sendContents(Player... players) {
-        InventoryContentPacket pk = new InventoryContentPacket();
-        pk.slots = new Item[this.getSize()];
-        for (int i = 0; i < this.getSize(); ++i) {
-            pk.slots[i] = this.getItem(i);
-        }
-
-        for (Player player : players) {
-            int id = player.getWindowId(this);
-            if (!player.spawned) {
-                this.close(player);
-                continue;
-            }
-            pk.inventoryId = id;
-            player.dataPacket(pk);
-        }
     }
 
     protected abstract BlockVector3[] onOpenBlock(Player who);
@@ -176,7 +135,7 @@ public abstract class FakeInventory extends ContainerInventory {
     }
 
     void close() {
-        Preconditions.checkState(!closed, "Already closed");
+        checkForClosed();
         getViewers().forEach(player -> player.removeWindow(this));
         closed = true;
     }
@@ -186,11 +145,49 @@ public abstract class FakeInventory extends ContainerInventory {
         return title;
     }
 
+    public boolean isClosed() {
+        return closed;
+    }
+
     public void setTitle(String title) {
         if (title == null) {
             this.title = type.getDefaultTitle();
         } else {
             this.title = title;
+        }
+    }
+
+    protected void placeBlock(Player who, BlockVector3 pos, int blockId, String blockEntityId) {
+        UpdateBlockPacket updateBlock = new UpdateBlockPacket();
+        updateBlock.blockRuntimeId = GlobalBlockPalette.getOrCreateRuntimeId(blockId, 0);
+        updateBlock.flags = UpdateBlockPacket.FLAG_ALL_PRIORITY;
+        updateBlock.x = pos.x;
+        updateBlock.y = pos.y;
+        updateBlock.z = pos.z;
+
+        who.dataPacket(updateBlock);
+
+        BlockEntityDataPacket blockEntityData = new BlockEntityDataPacket();
+        blockEntityData.x = pos.x;
+        blockEntityData.y = pos.y;
+        blockEntityData.z = pos.z;
+        blockEntityData.namedTag = getNbt(pos, blockEntityId, getTitle());
+
+        who.dataPacket(blockEntityData);
+    }
+
+    protected static byte[] getNbt(BlockVector3 pos, String blockEntityId, String name) {
+        CompoundTag tag = new CompoundTag()
+                .putString("id", blockEntityId)
+                .putInt("x", pos.x)
+                .putInt("y", pos.y)
+                .putInt("z", pos.z)
+                .putString("CustomName", name == null ? blockEntityId : name);
+
+        try {
+            return NBTIO.write(tag, ByteOrder.LITTLE_ENDIAN, true);
+        } catch (IOException e) {
+            throw new RuntimeException("Unable to create NBT for " + blockEntityId);
         }
     }
 }

@@ -15,14 +15,8 @@ Easily create fake inventories that players can interact with.
         event.getPlayer().sendMessage("You cliked on the inventory :D");    
     })
 
-    inventory.open(player);
+    player.addWindow(inventory);
 ``` 
 
-## Todo
-
-- Add Ender Chest support
-- Add Furnace support
-- Add Crafting Table support
-- Add Anvil support
-- Add Dispenser support
-- Add Dropper support
+## TODO
+- Add a `FakeInventory#update()` to update a inventory to all viewers.

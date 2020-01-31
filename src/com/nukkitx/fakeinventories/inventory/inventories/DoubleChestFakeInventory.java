@@ -1,7 +1,8 @@
-package com.nukkitx.fakeinventories.inventory;
+package com.nukkitx.fakeinventories.inventory.inventories;
 
 import cn.nukkit.Player;
 import cn.nukkit.Server;
+import cn.nukkit.block.BlockID;
 import cn.nukkit.blockentity.BlockEntity;
 import cn.nukkit.inventory.InventoryHolder;
 import cn.nukkit.inventory.InventoryType;
@@ -12,12 +13,10 @@ import cn.nukkit.network.protocol.BlockEntityDataPacket;
 
 import java.io.IOException;
 import java.nio.ByteOrder;
-import java.util.Arrays;
-import java.util.List;
 
 public final class DoubleChestFakeInventory extends ChestFakeInventory {
 
-    DoubleChestFakeInventory(InventoryHolder holder, String title) {
+    public DoubleChestFakeInventory(InventoryHolder holder, String title) {
         super(InventoryType.DOUBLE_CHEST, holder, title);
     }
 
@@ -35,11 +34,11 @@ public final class DoubleChestFakeInventory extends ChestFakeInventory {
 
     @Override
     protected BlockVector3[] onOpenBlock(Player who) {
-        BlockVector3 blockPositionA = new BlockVector3(who.getFloorX(), who.getFloorY() + 2, who.getFloorZ());
+        BlockVector3 blockPositionA = new BlockVector3(who.getFloorX(), who.getFloorY() + BLOCK_OFFSET, who.getFloorZ());
         BlockVector3 blockPositionB = blockPositionA.add(1, 0, 0);
 
-        placeChest(who, blockPositionA);
-        placeChest(who, blockPositionB);
+        placeBlock(who, blockPositionA, BlockID.CHEST, BlockEntity.CHEST);
+        placeBlock(who, blockPositionB, BlockID.CHEST, BlockEntity.CHEST);
 
         pair(who, blockPositionA, blockPositionB);
         pair(who, blockPositionB, blockPositionA);

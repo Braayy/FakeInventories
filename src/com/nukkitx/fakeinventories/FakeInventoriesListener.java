@@ -4,27 +4,25 @@ import cn.nukkit.Player;
 import cn.nukkit.event.EventHandler;
 import cn.nukkit.event.EventPriority;
 import cn.nukkit.event.Listener;
-import cn.nukkit.event.block.BlockBreakEvent;
-import cn.nukkit.event.inventory.InventoryCloseEvent;
 import cn.nukkit.event.inventory.InventoryTransactionEvent;
-import cn.nukkit.event.player.PlayerDropItemEvent;
-import cn.nukkit.event.server.DataPacketReceiveEvent;
 import cn.nukkit.event.server.DataPacketSendEvent;
 import cn.nukkit.inventory.transaction.action.InventoryAction;
 import cn.nukkit.inventory.transaction.action.SlotChangeAction;
-import cn.nukkit.item.Item;
 import cn.nukkit.math.BlockVector3;
-import cn.nukkit.network.protocol.ContainerClosePacket;
 import cn.nukkit.network.protocol.DataPacket;
 import cn.nukkit.network.protocol.UpdateBlockPacket;
-import com.nukkitx.fakeinventories.inventory.*;
+import com.nukkitx.fakeinventories.inventory.FakeInventories;
+import com.nukkitx.fakeinventories.inventory.FakeInventory;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class FakeInventoriesListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST)
-    public void onPacketSend(DataPacketSendEvent event) {
+    public void onDataPacketSend(DataPacketSendEvent event) {
         DataPacket packet = event.getPacket();
         if (packet instanceof UpdateBlockPacket) {
             UpdateBlockPacket updateBlock = (UpdateBlockPacket) packet;
@@ -41,7 +39,7 @@ public class FakeInventoriesListener implements Listener {
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)
-    public void onTransaction(InventoryTransactionEvent event) {
+    public void onInventoryTransaction(InventoryTransactionEvent event) {
         Map<FakeInventory, List<SlotChangeAction>> actions = new HashMap<>();
         Player source = event.getTransaction().getSource();
 
